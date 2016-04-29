@@ -20,6 +20,7 @@
 
 # Source code directories
 SRC_INCLUDE=../include
+CJSON=../cjson
 
 prefix=@prefix@
 exec_prefix=@exec_prefix@
@@ -52,8 +53,10 @@ DBLDFLAGS=@DBLDFLAGS@
 DBLIBS=@DBLIBS@
 MATHLIBS=-lm
 OTHERLIBS=@OTHERLIBS@
+CJSONLIBS= $(CJSON)/libcjson.a
 
 COMMON_INC=$(SRC_INCLUDE)/config.h $(SRC_INCLUDE)/common.h $(SRC_INCLUDE)/io.h $(SRC_INCLUDE)/protoapi.h $(SRC_INCLUDE)/utils.h
+COMMON_INC += $(CJSON)/cJSON.h
 COMMON_SRC=io.c utils.c
 COMMON_OBJS=io.o utils.o
 
@@ -84,13 +87,13 @@ ndo2db:
 	$(MAKE) ndo2db-4x
 
 ndo2db-2x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-2x.o dbstatements-2x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_2X -o ndo2db-2x queue.c ndo2db.c dbhandlers-2x.o dbstatements-2x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_2X -o ndo2db-2x queue.c ndo2db.c dbhandlers-2x.o dbstatements-2x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS) $(CJSONLIBS)
 
 ndo2db-3x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-3x.o dbstatements-3x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_3X -o ndo2db-3x queue.c ndo2db.c dbhandlers-3x.o dbstatements-3x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_3X -o ndo2db-3x queue.c ndo2db.c dbhandlers-3x.o dbstatements-3x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS) $(CJSONLIBS)
 
 ndo2db-4x: queue.c ndo2db.c $(NDO_INC) $(NDO_OBJS) $(COMMON_INC) $(COMMON_OBJS) dbhandlers-4x.o dbstatements-4x.o
-	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_4X -o ndo2db-4x queue.c ndo2db.c dbhandlers-4x.o dbstatements-4x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS)
+	$(CC) $(CFLAGS) $(DBCFLAGS) -D BUILD_NAGIOS_4X -o ndo2db-4x queue.c ndo2db.c dbhandlers-4x.o dbstatements-4x.o $(COMMON_OBJS) $(NDO_OBJS) $(LDFLAGS) $(DBLDFLAGS) $(LIBS) $(SOCKETLIBS) $(DBLIBS) $(MATHLIBS) $(OTHERLIBS) $(CJSONLIBS)
 
 
 
