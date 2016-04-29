@@ -76,6 +76,16 @@
 #include "../include/nagios-4x/macros.h"
 #endif
 
+#include "../cjson/cJSON.h"
+
+/* libcurl (http://curl.haxx.se/libcurl/c) */
+#include <curl/curl.h>
+#include <time.h>
+
+
+#define GET_MS(S, US)	((S) * 1000 * 1000 + (US)) / 1000
+
+
 /* Specify event broker API version (required). */
 NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 
@@ -236,6 +246,7 @@ void *ndomod_module_handle = NULL;
 char *ndomod_instance_name = NULL;
 char *ndomod_buffer_file = NULL;
 char *ndomod_sink_name = NULL;
+char *ndomod_es_host = NULL;
 int ndomod_sink_type = NDO_SINK_UNIXSOCKET;
 int ndomod_sink_tcp_port = NDO_DEFAULT_TCP_PORT;
 int ndomod_sink_is_open = FALSE;
@@ -285,6 +296,12 @@ extern int __nagios_object_structure_version;
 extern int use_ssl;
 
 
+// libcurl 
+CURL *pCurl = NULL;
+CURLcode res;
+
+
+
 
 /* Setup our module when loaded by the event broker. */
 int nebmodule_init(int flags, char *args, void *handle) {
@@ -307,6 +324,8 @@ int nebmodule_init(int flags, char *args, void *handle) {
 		ndomod_printf_to_logs("ndomod: Error processing module arguments.");
 		return -1;
 	}
+
+    ndomod_printf_to_logs("ES HOST: %s\n", ndomod_es_host);
 
 	/* Initialize our data sink and event callbacks. */
 	if (ndomod_init() == NDO_ERROR) {
@@ -359,6 +378,11 @@ static int ndomod_init(void) {
 	ndomod_sink_last_reconnect_attempt = 0;
 	ndomod_sink_last_reconnect_warning = 0;
 	ndomod_allow_sink_activity = TRUE;
+
+
+	/* Initialize http connection*/
+	curl_global_init(CURL_GLOBAL_ALL);
+	
 
 	/* Initialize our data sink buffer and load unprocessed data. */
 	ndomod_sink_buffer_init(&sinkbuf, ndomod_sink_buffer_slots);
@@ -514,6 +538,8 @@ static int ndomod_process_config_var(char *arg) {
 
 	NDO_HANDLE_STRING_OPT("instance_name", ndomod_instance_name);
 
+	NDO_HANDLE_STRING_OPT("es_host", ndomod_es_host);
+
 	NDO_HANDLE_STRING_OPT("output", ndomod_sink_name);
 
 	if (strcmp(var, "output_type") == 0) {
@@ -610,6 +636,7 @@ static void ndomod_free_config_memory(void) {
 	my_free(ndomod_sink_name);
 	my_free(ndomod_sink_rotation_command);
 	my_free(ndomod_buffer_file);
+	my_free(ndomod_es_host);
 }
 
 
@@ -1367,6 +1394,52 @@ static void ndomod_commands_serialize(commandsmember *c, ndo_dbuf *dbuf,
 }
 
 
+#define INDEX_BUFLEN     128
+#define JSON_BUFLEN     2048
+static void ndomod_post(char *buffer) {
+    time_t now = time(0);
+    char index[INDEX_BUFLEN];
+    char json[JSON_BUFLEN];
+
+    strftime(index, INDEX_BUFLEN, "{\"create\":{\"_index\":\"nagios-%Y.%m.%d\", \"_type\":\"nagios\"}}\n", localtime(&now));
+    ndomod_printf_to_logs("index: %s\n", index);
+    snprintf(json, JSON_BUFLEN, "%s%s\n", index, buffer); 
+	ndomod_printf_to_logs("post: %s\n", json);
+
+	pCurl = curl_easy_init();
+	if (NULL != pCurl) {
+		// set timeout 3s
+		curl_easy_setopt(pCurl, CURLOPT_TIMEOUT, 3);
+
+		// set post url
+		curl_easy_setopt(pCurl, CURLOPT_URL, ndomod_es_host);
+
+		// set http header
+		struct curl_slist *headers = NULL;
+		headers = curl_slist_append(headers, "Accept: application/json");
+		headers = curl_slist_append(headers, "Content-Type: application/json");
+
+		// set http requests
+		curl_easy_setopt(pCurl, CURLOPT_CUSTOMREQUEST, "POST");
+		curl_easy_setopt(pCurl, CURLOPT_HTTPHEADER, headers);
+		curl_easy_setopt(pCurl, CURLOPT_POSTFIELDS, json);
+
+		// get http response code
+		res = curl_easy_perform(pCurl);
+		if (res != CURLE_OK) {
+			printf("curl_easy_perform() failed:%s\n", curl_easy_strerror(res));
+			ndomod_printf_to_logs("curl_easy_perform() failed:%s\n", curl_easy_strerror(res));
+		} else {
+            ndomod_printf_to_logs("post ok\n");
+        }
+		// always cleanup
+		curl_easy_cleanup(pCurl);
+	}
+
+}
+
+
+
 static int ndomod_broker_data(int event_type, void *data) {
 	ndo_dbuf dbuf;
 	bd_callback handler;
@@ -1791,6 +1864,48 @@ static bd_result ndomod_broker_host_check_data(bd_phase phase,
 #endif
 				INIT_BD_SE(NDO_DATA_PERFDATA, hcdata->perf_data)
 			};
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", hcdata->type);
+			cJSON_AddNumberToObject(root, "flags", hcdata->flags);
+			cJSON_AddNumberToObject(root, "attr", hcdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", 
+				GET_MS(hcdata->timestamp.tv_sec, hcdata->timestamp.tv_usec));
+			cJSON_AddNumberToObject(root, "current_attempt", hcdata->current_attempt);
+			cJSON_AddNumberToObject(root, "check_type", hcdata->check_type);
+			cJSON_AddNumberToObject(root, "max_attempts", hcdata->max_attempts);
+			cJSON_AddNumberToObject(root, "state_type", hcdata->state_type);
+			cJSON_AddNumberToObject(root, "state", hcdata->state);
+			cJSON_AddNumberToObject(root, "timeout", hcdata->timeout);
+			cJSON_AddNumberToObject(root, "start_time", 
+				GET_MS(hcdata->start_time.tv_sec, hcdata->start_time.tv_usec));
+			cJSON_AddNumberToObject(root, "end_time", 
+				GET_MS(hcdata->end_time.tv_sec, hcdata->end_time.tv_usec));
+			cJSON_AddNumberToObject(root, "early_timeout", hcdata->early_timeout);
+			cJSON_AddNumberToObject(root, "execution_time", hcdata->execution_time);
+			cJSON_AddNumberToObject(root, "latency", hcdata->latency);
+			cJSON_AddNumberToObject(root, "return_code", hcdata->return_code);
+
+			cJSON_AddStringToObject(root, "host_name", (hcdata->host_name == NULL) ? "" : hcdata->host_name);
+			cJSON_AddStringToObject(root, "command_name", (hcdata->command_name == NULL) ? "" : hcdata->command_name);
+			cJSON_AddStringToObject(root, "command_args", (hcdata->command_args == NULL) ? "" : hcdata->command_args);
+			cJSON_AddStringToObject(root, "command_line", (hcdata->command_line == NULL) ? "" : hcdata->command_line);
+			cJSON_AddStringToObject(root, "output", (hcdata->output == NULL) ? "" : hcdata->output);
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
+			cJSON_AddStringToObject(root, "long_output", (hcdata->long_output == NULL) ? "" : hcdata->long_output);
+#endif
+			cJSON_AddStringToObject(root, "perf_data", (hcdata->perf_data == NULL) ? "" : hcdata->perf_data);
+
+			char *buffer = cJSON_PrintUnformatted(root);
+            ndomod_printf_to_logs("__func__: %s\n", buffer);
+
+			//ndomod_post(hcdata->type, buffer);
+			ndomod_post(buffer);
+
+			free(buffer);
+			cJSON_Delete(root);
+
 			ndomod_broker_data_serialize(dbufp, NDO_API_HOSTCHECKDATA,
 					host_check_data, ARRAY_SIZE(host_check_data), TRUE);
 		}
