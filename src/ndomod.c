@@ -84,6 +84,13 @@
 
 
 #define GET_MS(S, US)	((S) * 1000 * 1000 + (US)) / 1000
+#define GET_US(S, US)	((S) * 1000 * 1000 + (US))
+
+#define STRING(X)	((X) == NULL) ? "" : (X)
+
+
+CURL *pCurl = NULL;
+CURLcode res;
 
 
 /* Specify event broker API version (required). */
@@ -294,13 +301,6 @@ extern int __nagios_object_structure_version;
 
 /* This one lives in ndoutils io.c. */
 extern int use_ssl;
-
-
-// libcurl 
-CURL *pCurl = NULL;
-CURLcode res;
-
-
 
 
 /* Setup our module when loaded by the event broker. */
@@ -1398,13 +1398,16 @@ static void ndomod_commands_serialize(commandsmember *c, ndo_dbuf *dbuf,
 #define JSON_BUFLEN     2048
 static void ndomod_post(char *buffer) {
     time_t now = time(0);
-    char index[INDEX_BUFLEN];
-    char json[JSON_BUFLEN];
+    char index[INDEX_BUFLEN] = {0};
+    char json[JSON_BUFLEN] = {0};
+
+	bzero(&index , sizeof(index));
+	bzero(&json , sizeof(json));
 
     strftime(index, INDEX_BUFLEN, "{\"create\":{\"_index\":\"nagios-%Y.%m.%d\", \"_type\":\"nagios\"}}\n", localtime(&now));
-    ndomod_printf_to_logs("index: %s\n", index);
-    snprintf(json, JSON_BUFLEN, "%s%s\n", index, buffer); 
-	ndomod_printf_to_logs("post: %s\n", json);
+    //ndomod_printf_to_logs("index: %s\n", index);
+    snprintf(json, JSON_BUFLEN, "%s%s\n", index, buffer);
+	//ndomod_printf_to_logs("post: %s\n", json);
 
 	pCurl = curl_easy_init();
 	if (NULL != pCurl) {
@@ -1430,7 +1433,7 @@ static void ndomod_post(char *buffer) {
 			printf("curl_easy_perform() failed:%s\n", curl_easy_strerror(res));
 			ndomod_printf_to_logs("curl_easy_perform() failed:%s\n", curl_easy_strerror(res));
 		} else {
-            ndomod_printf_to_logs("post ok\n");
+            //ndomod_printf_to_logs("post ok\n");
         }
 		// always cleanup
 		curl_easy_cleanup(pCurl);
@@ -1617,6 +1620,27 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 						INIT_BD_SE(NDO_DATA_HOST, host_name),
 						INIT_BD_SE(NDO_DATA_SERVICE, service_desc)
 					};
+
+					cJSON *root;
+					root = cJSON_CreateObject();
+					cJSON_AddNumberToObject(root, "type", eventdata->type);
+					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
+					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
+					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+
+					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
+					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
+					cJSON_AddNumberToObject(root, "run_time", (unsigned long)eventdata->run_time);
+
+
+					cJSON_AddStringToObject(root, "host_name", STRING(host_name));
+					cJSON_AddStringToObject(root, "service_desc", STRING(service_desc));
+
+					char *buffer = cJSON_PrintUnformatted(root);
+					ndomod_post(buffer);
+					free(buffer);
+					cJSON_Delete(root);
+					
 					ndomod_broker_data_serialize(dbufp, NDO_API_TIMEDEVENTDATA,
 							timed_event_data, ARRAY_SIZE(timed_event_data), TRUE);
 				}
@@ -1635,6 +1659,26 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 						INIT_BD_UL(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time),
 						INIT_BD_SE(NDO_DATA_HOST, host_name)
 					};
+
+					cJSON *root;
+					root = cJSON_CreateObject();
+					cJSON_AddNumberToObject(root, "type", eventdata->type);
+					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
+					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
+					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+
+					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
+					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
+					cJSON_AddNumberToObject(root, "run_time", (unsigned long)eventdata->run_time);
+
+
+					cJSON_AddStringToObject(root, "host_name", STRING(host_name));
+
+					char *buffer = cJSON_PrintUnformatted(root);
+					ndomod_post(buffer);
+					free(buffer);
+					cJSON_Delete(root);
+					
 					ndomod_broker_data_serialize(dbufp, NDO_API_TIMEDEVENTDATA,
 							timed_event_data, ARRAY_SIZE(timed_event_data), TRUE);
 				}
@@ -1656,6 +1700,27 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 						INIT_BD_SE(NDO_DATA_HOST, host_name),
 						INIT_BD_SE(NDO_DATA_SERVICE, service_desc)
 					};
+
+					cJSON *root;
+					root = cJSON_CreateObject();
+					cJSON_AddNumberToObject(root, "type", eventdata->type);
+					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
+					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
+					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+
+					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
+					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
+					cJSON_AddNumberToObject(root, "run_time", (unsigned long)eventdata->run_time);
+
+
+					cJSON_AddStringToObject(root, "host_name", STRING(host_name));
+					cJSON_AddStringToObject(root, "service_desc", STRING(service_desc));
+
+					char *buffer = cJSON_PrintUnformatted(root);
+					ndomod_post(buffer);
+					free(buffer);
+					cJSON_Delete(root);
+					
 					ndomod_broker_data_serialize(dbufp, NDO_API_TIMEDEVENTDATA,
 							timed_event_data, ARRAY_SIZE(timed_event_data), TRUE);
 				}
@@ -1669,6 +1734,23 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 						INIT_BD_I(NDO_DATA_RECURRING, eventdata->recurring),
 						INIT_BD_UL(NDO_DATA_RUNTIME, (unsigned long)eventdata->run_time)
 					};
+
+					cJSON *root;
+					root = cJSON_CreateObject();
+					cJSON_AddNumberToObject(root, "type", eventdata->type);
+					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
+					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
+					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+
+					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
+					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
+					cJSON_AddNumberToObject(root, "run_time", (unsigned long)eventdata->run_time);
+
+					char *buffer = cJSON_PrintUnformatted(root);
+					ndomod_post(buffer);
+					free(buffer);
+					cJSON_Delete(root);
+					
 					ndomod_broker_data_serialize(dbufp, NDO_API_TIMEDEVENTDATA,
 							timed_event_data, ARRAY_SIZE(timed_event_data), TRUE);
 				}
@@ -1692,6 +1774,30 @@ static bd_result ndomod_broker_log_data(bd_phase phase,
 			/* Log data strings are not escaped... */
 			INIT_BD_S(NDO_DATA_LOGENTRY, logdata->data)
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", logdata->type);
+		cJSON_AddNumberToObject(root, "flags", logdata->flags);
+		cJSON_AddNumberToObject(root, "attr", logdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", logdata->timestamp.tv_sec);
+
+
+		char ts[32];
+		strftime(ts, 32, "%FT%T", localtime(&logdata->timestamp.tv_sec));
+		cJSON_AddStringToObject(root, "@timestamp", ts);
+		
+		
+		cJSON_AddNumberToObject(root, "data_type", logdata->data_type);
+		cJSON_AddNumberToObject(root, "entry_time", (unsigned long)logdata->entry_time);
+
+		cJSON_AddStringToObject(root, "data", STRING(logdata->data));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+		
 		ndomod_broker_data_serialize(dbufp, NDO_API_LOGDATA, log_data,
 				ARRAY_SIZE(log_data), TRUE);
 
@@ -1718,6 +1824,32 @@ static bd_result ndomod_broker_system_command_data(bd_phase phase,
 			/* Preparing if system command will have long_output in the future. */
 			INIT_BD_SE(NDO_DATA_LONGOUTPUT, cmddata->output)
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", cmddata->type);
+		cJSON_AddNumberToObject(root, "flags", cmddata->flags);
+		cJSON_AddNumberToObject(root, "attr", cmddata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", cmddata->timestamp.tv_sec);
+
+		cJSON_AddNumberToObject(root, "start_time", 
+			GET_US(cmddata->start_time.tv_sec, cmddata->start_time.tv_usec));
+		cJSON_AddNumberToObject(root, "end_time", 
+			GET_US(cmddata->end_time.tv_sec, cmddata->end_time.tv_usec));
+		cJSON_AddNumberToObject(root, "timeout", cmddata->timeout);
+		cJSON_AddNumberToObject(root, "early_timeout", cmddata->early_timeout);
+		cJSON_AddNumberToObject(root, "execution_time", cmddata->execution_time);
+		cJSON_AddNumberToObject(root, "return_code", cmddata->return_code);
+		
+
+		cJSON_AddStringToObject(root, "output", STRING(cmddata->output));
+		cJSON_AddStringToObject(root, "command_line", STRING(cmddata->command_line));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
 		ndomod_broker_data_serialize(dbufp, NDO_API_SYSTEMCOMMANDDATA,
 				system_command_data, ARRAY_SIZE(system_command_data), TRUE);
 
@@ -1750,6 +1882,40 @@ static bd_result ndomod_broker_event_handler_data(bd_phase phase,
 			/* Preparing if eventhandler will have long_output in the future. */
 			INIT_BD_SE(NDO_DATA_LONGOUTPUT, ehanddata->output)
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", ehanddata->type);
+		cJSON_AddNumberToObject(root, "flags", ehanddata->flags);
+		cJSON_AddNumberToObject(root, "attr", ehanddata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", ehanddata->timestamp.tv_sec);
+
+
+		cJSON_AddNumberToObject(root, "eventhandler_type", ehanddata->eventhandler_type);
+		cJSON_AddNumberToObject(root, "state_type", ehanddata->state_type);
+		cJSON_AddNumberToObject(root, "state", ehanddata->state);
+		cJSON_AddNumberToObject(root, "timeout", ehanddata->timeout);
+		cJSON_AddNumberToObject(root, "start_time", 
+			GET_US(ehanddata->start_time.tv_sec, ehanddata->start_time.tv_usec));
+		cJSON_AddNumberToObject(root, "end_time", 
+			GET_US(ehanddata->end_time.tv_sec, ehanddata->end_time.tv_usec));
+		cJSON_AddNumberToObject(root, "early_timeout", ehanddata->early_timeout);
+		cJSON_AddNumberToObject(root, "execution_time", ehanddata->execution_time);
+		cJSON_AddNumberToObject(root, "return_code", ehanddata->return_code);
+
+		cJSON_AddStringToObject(root, "host_name", STRING(ehanddata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(ehanddata->service_description));
+		cJSON_AddStringToObject(root, "output", STRING(ehanddata->output));
+		cJSON_AddStringToObject(root, "command_name", STRING(ehanddata->command_name));
+		cJSON_AddStringToObject(root, "command_args", STRING(ehanddata->command_args));
+		cJSON_AddStringToObject(root, "command_line", STRING(ehanddata->command_line));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+		
 		ndomod_broker_data_serialize(dbufp, NDO_API_EVENTHANDLERDATA,
 				event_handler_data, ARRAY_SIZE(event_handler_data), TRUE);
 
@@ -1780,6 +1946,38 @@ static bd_result ndomod_broker_notification_data(bd_phase phase,
 			INIT_BD_I(NDO_DATA_ESCALATED, notdata->escalated),
 			INIT_BD_I(NDO_DATA_CONTACTSNOTIFIED, notdata->contacts_notified)
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", notdata->type);
+		cJSON_AddNumberToObject(root, "flags", notdata->flags);
+		cJSON_AddNumberToObject(root, "attr", notdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", notdata->timestamp.tv_sec);
+
+
+		cJSON_AddNumberToObject(root, "notification_type", notdata->notification_type);
+		cJSON_AddNumberToObject(root, "state", notdata->state);
+		cJSON_AddNumberToObject(root, "reason_type", notdata->reason_type);
+		cJSON_AddNumberToObject(root, "start_time", 
+			GET_US(notdata->start_time.tv_sec, notdata->start_time.tv_usec));
+		cJSON_AddNumberToObject(root, "end_time", 
+			GET_US(notdata->end_time.tv_sec, notdata->end_time.tv_usec));
+		cJSON_AddNumberToObject(root, "escalated", notdata->escalated);
+		cJSON_AddNumberToObject(root, "contacts_notified", notdata->contacts_notified);
+
+		cJSON_AddStringToObject(root, "host_name", STRING(notdata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(notdata->service_description));
+		cJSON_AddStringToObject(root, "output", STRING(notdata->output));
+		cJSON_AddStringToObject(root, "ack_author", STRING(notdata->ack_author));
+		cJSON_AddStringToObject(root, "ack_data", STRING(notdata->ack_data));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+
+		
 		ndomod_broker_data_serialize(dbufp, NDO_API_NOTIFICATIONDATA,
 				notification_data, ARRAY_SIZE(notification_data), TRUE);
 
@@ -1822,6 +2020,48 @@ static bd_result ndomod_broker_service_check_data(bd_phase phase,
 #endif
 				INIT_BD_SE(NDO_DATA_PERFDATA, scdata->perf_data)
 			};
+
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", scdata->type);
+			cJSON_AddNumberToObject(root, "flags", scdata->flags);
+			cJSON_AddNumberToObject(root, "attr", scdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", scdata->timestamp.tv_sec);
+			
+			cJSON_AddNumberToObject(root, "current_attempt", scdata->current_attempt);
+			cJSON_AddNumberToObject(root, "check_type", scdata->check_type);
+			cJSON_AddNumberToObject(root, "max_attempts", scdata->max_attempts);
+			cJSON_AddNumberToObject(root, "state_type", scdata->state_type);
+			cJSON_AddNumberToObject(root, "state", scdata->state);
+			cJSON_AddNumberToObject(root, "timeout", scdata->timeout);
+			cJSON_AddNumberToObject(root, "start_time", 
+				GET_US(scdata->start_time.tv_sec, scdata->start_time.tv_usec));
+			cJSON_AddNumberToObject(root, "end_time", 
+				GET_US(scdata->end_time.tv_sec, scdata->end_time.tv_usec));
+			cJSON_AddNumberToObject(root, "early_timeout", scdata->early_timeout);
+			cJSON_AddNumberToObject(root, "execution_time", scdata->execution_time);
+			cJSON_AddNumberToObject(root, "latency", scdata->latency);
+			cJSON_AddNumberToObject(root, "return_code", scdata->return_code);
+			
+			cJSON_AddStringToObject(root, "host_name", STRING(scdata->host_name));
+			cJSON_AddStringToObject(root, "service_description", STRING(scdata->service_description));
+			cJSON_AddStringToObject(root, "output", STRING(scdata->output));
+			cJSON_AddStringToObject(root, "command_name", STRING(scdata->command_name));
+			cJSON_AddStringToObject(root, "command_args", STRING(scdata->command_args));
+			cJSON_AddStringToObject(root, "command_line", STRING(scdata->command_line));
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
+			cJSON_AddStringToObject(root, "long_output", STRING(scdata->long_output));		
+#endif
+			cJSON_AddStringToObject(root, "perf_data", STRING(scdata->perf_data));
+
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+
+			
 			ndomod_broker_data_serialize(dbufp, NDO_API_SERVICECHECKDATA,
 					service_check_data, ARRAY_SIZE(service_check_data), TRUE);
 		}
@@ -1870,8 +2110,7 @@ static bd_result ndomod_broker_host_check_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "type", hcdata->type);
 			cJSON_AddNumberToObject(root, "flags", hcdata->flags);
 			cJSON_AddNumberToObject(root, "attr", hcdata->attr);
-			cJSON_AddNumberToObject(root, "timestamp", 
-				GET_MS(hcdata->timestamp.tv_sec, hcdata->timestamp.tv_usec));
+			cJSON_AddNumberToObject(root, "timestamp", hcdata->timestamp.tv_sec);
 			cJSON_AddNumberToObject(root, "current_attempt", hcdata->current_attempt);
 			cJSON_AddNumberToObject(root, "check_type", hcdata->check_type);
 			cJSON_AddNumberToObject(root, "max_attempts", hcdata->max_attempts);
@@ -1879,30 +2118,31 @@ static bd_result ndomod_broker_host_check_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "state", hcdata->state);
 			cJSON_AddNumberToObject(root, "timeout", hcdata->timeout);
 			cJSON_AddNumberToObject(root, "start_time", 
-				GET_MS(hcdata->start_time.tv_sec, hcdata->start_time.tv_usec));
+				GET_US(hcdata->start_time.tv_sec, hcdata->start_time.tv_usec));
 			cJSON_AddNumberToObject(root, "end_time", 
-				GET_MS(hcdata->end_time.tv_sec, hcdata->end_time.tv_usec));
+				GET_US(hcdata->end_time.tv_sec, hcdata->end_time.tv_usec));
 			cJSON_AddNumberToObject(root, "early_timeout", hcdata->early_timeout);
 			cJSON_AddNumberToObject(root, "execution_time", hcdata->execution_time);
 			cJSON_AddNumberToObject(root, "latency", hcdata->latency);
 			cJSON_AddNumberToObject(root, "return_code", hcdata->return_code);
 
-			cJSON_AddStringToObject(root, "host_name", (hcdata->host_name == NULL) ? "" : hcdata->host_name);
-			cJSON_AddStringToObject(root, "command_name", (hcdata->command_name == NULL) ? "" : hcdata->command_name);
-			cJSON_AddStringToObject(root, "command_args", (hcdata->command_args == NULL) ? "" : hcdata->command_args);
-			cJSON_AddStringToObject(root, "command_line", (hcdata->command_line == NULL) ? "" : hcdata->command_line);
-			cJSON_AddStringToObject(root, "output", (hcdata->output == NULL) ? "" : hcdata->output);
+
+			char ts[32];
+			strftime(ts, 32, "%FT%T", localtime(&hcdata->timestamp.tv_sec));
+			cJSON_AddStringToObject(root, "@timestamp", ts);
+		
+			cJSON_AddStringToObject(root, "host_name", STRING(hcdata->host_name));
+			cJSON_AddStringToObject(root, "command_name", STRING(hcdata->command_name));
+			cJSON_AddStringToObject(root, "command_args", STRING(hcdata->command_args));
+			cJSON_AddStringToObject(root, "command_line", STRING(hcdata->command_line));
+			cJSON_AddStringToObject(root, "output", STRING(hcdata->output));
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
-			cJSON_AddStringToObject(root, "long_output", (hcdata->long_output == NULL) ? "" : hcdata->long_output);
+			cJSON_AddStringToObject(root, "long_output", STRING(hcdata->long_output));
 #endif
-			cJSON_AddStringToObject(root, "perf_data", (hcdata->perf_data == NULL) ? "" : hcdata->perf_data);
+			cJSON_AddStringToObject(root, "perf_data", STRING(hcdata->perf_data));
 
 			char *buffer = cJSON_PrintUnformatted(root);
-            ndomod_printf_to_logs("__func__: %s\n", buffer);
-
-			//ndomod_post(hcdata->type, buffer);
 			ndomod_post(buffer);
-
 			free(buffer);
 			cJSON_Delete(root);
 
@@ -1935,6 +2175,34 @@ static bd_result ndomod_broker_comment_data(bd_phase phase,
 			INIT_BD_UL(NDO_DATA_EXPIRATIONTIME, (unsigned long)comdata->expire_time),
 			INIT_BD_UL(NDO_DATA_COMMENTID, comdata->comment_id)
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", comdata->type);
+		cJSON_AddNumberToObject(root, "flags", comdata->flags);
+		cJSON_AddNumberToObject(root, "attr", comdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", comdata->timestamp.tv_sec);
+		
+		cJSON_AddNumberToObject(root, "comment_type", comdata->comment_type);
+		cJSON_AddNumberToObject(root, "entry_time", comdata->entry_time);
+		cJSON_AddNumberToObject(root, "persistent", comdata->persistent);
+		cJSON_AddNumberToObject(root, "source", comdata->source);
+		cJSON_AddNumberToObject(root, "entry_type", comdata->entry_type);
+		cJSON_AddNumberToObject(root, "expires", comdata->expires);
+		cJSON_AddNumberToObject(root, "expire_time", (unsigned long)comdata->expire_time);
+		cJSON_AddNumberToObject(root, "comment_id", comdata->comment_id);
+		
+		cJSON_AddStringToObject(root, "host_name", STRING(comdata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(comdata->service_description));
+		cJSON_AddStringToObject(root, "author_name", STRING(comdata->author_name));
+		cJSON_AddStringToObject(root, "comment_data", STRING(comdata->comment_data));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+		
 		ndomod_broker_data_serialize(dbufp, NDO_API_COMMENTDATA,
 				comment_data, ARRAY_SIZE(comment_data), TRUE);
 
@@ -1963,6 +2231,34 @@ static bd_result ndomod_broker_downtime_data(bd_phase phase,
 			INIT_BD_UL(NDO_DATA_TRIGGEREDBY, (unsigned long)downdata->triggered_by),
 			INIT_BD_UL(NDO_DATA_DOWNTIMEID, (unsigned long)downdata->downtime_id)
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", downdata->type);
+		cJSON_AddNumberToObject(root, "flags", downdata->flags);
+		cJSON_AddNumberToObject(root, "attr", downdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", downdata->timestamp.tv_sec);
+		
+		cJSON_AddNumberToObject(root, "downtime_type", downdata->downtime_type);
+		cJSON_AddNumberToObject(root, "entry_time", (unsigned long)downdata->entry_time);
+		cJSON_AddNumberToObject(root, "start_time", (unsigned long)downdata->start_time);
+		cJSON_AddNumberToObject(root, "end_time", (unsigned long)downdata->end_time);
+		cJSON_AddNumberToObject(root, "fixed", downdata->fixed);
+		cJSON_AddNumberToObject(root, "duration", (unsigned long)downdata->duration);
+		cJSON_AddNumberToObject(root, "triggered_by", (unsigned long)downdata->triggered_by);
+		cJSON_AddNumberToObject(root, "downtime_id", (unsigned long)downdata->downtime_id);
+		
+		cJSON_AddStringToObject(root, "host_name", STRING(downdata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(downdata->service_description));
+		cJSON_AddStringToObject(root, "author_name", STRING(downdata->author_name));
+		cJSON_AddStringToObject(root, "comment_data", STRING(downdata->comment_data));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+
 		ndomod_broker_data_serialize(dbufp, NDO_API_DOWNTIMEDATA,
 				downtime_data, ARRAY_SIZE(downtime_data), TRUE);
 
@@ -1991,6 +2287,29 @@ static bd_result ndomod_broker_flapping_data(bd_phase phase,
 			INIT_BD_UL(NDO_DATA_COMMENTTIME, (temp_comment) ? (unsigned long)temp_comment->entry_time : 0),
 			INIT_BD_UL(NDO_DATA_COMMENTID, flapdata->comment_id)
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", flapdata->type);
+		cJSON_AddNumberToObject(root, "flags", flapdata->flags);
+		cJSON_AddNumberToObject(root, "attr", flapdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", flapdata->timestamp.tv_sec);
+		
+		cJSON_AddNumberToObject(root, "flapping_type", flapdata->flapping_type);
+		cJSON_AddNumberToObject(root, "percent_change", flapdata->percent_change);
+		cJSON_AddNumberToObject(root, "high_threshold", flapdata->high_threshold);
+		cJSON_AddNumberToObject(root, "low_threshold", flapdata->low_threshold);
+		cJSON_AddNumberToObject(root, "comment_id", (unsigned long)flapdata->comment_id);
+		
+		cJSON_AddStringToObject(root, "host_name", STRING(flapdata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(flapdata->service_description));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+		
 		ndomod_broker_data_serialize(dbufp, NDO_API_FLAPPINGDATA,
 				flapping_data, ARRAY_SIZE(flapping_data), TRUE);
 
@@ -2035,6 +2354,43 @@ static bd_result ndomod_broker_program_status_data(bd_phase phase,
 			INIT_BD_SE(NDO_DATA_GLOBALHOSTEVENTHANDLER, psdata->global_host_event_handler),
 			INIT_BD_SE(NDO_DATA_GLOBALSERVICEEVENTHANDLER, psdata->global_service_event_handler),
 		};
+
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", psdata->type);
+		cJSON_AddNumberToObject(root, "flags", psdata->flags);
+		cJSON_AddNumberToObject(root, "attr", psdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", psdata->timestamp.tv_sec);
+
+		cJSON_AddNumberToObject(root, "program_start", psdata->program_start);
+		cJSON_AddNumberToObject(root, "last_log_rotation", psdata->last_log_rotation);	
+		cJSON_AddNumberToObject(root, "pid", psdata->pid);
+		cJSON_AddNumberToObject(root, "daemon_mode", psdata->daemon_mode);
+		cJSON_AddNumberToObject(root, "notifications_enabled", psdata->notifications_enabled);
+		cJSON_AddNumberToObject(root, "active_service_checks_enabled", psdata->active_service_checks_enabled);
+		cJSON_AddNumberToObject(root, "passive_service_checks_enabled", psdata->passive_service_checks_enabled);
+		cJSON_AddNumberToObject(root, "active_host_checks_enabled", psdata->active_host_checks_enabled);
+		cJSON_AddNumberToObject(root, "passive_host_checks_enabled", psdata->passive_host_checks_enabled);
+		cJSON_AddNumberToObject(root, "passive_service_checks_enabled", psdata->passive_service_checks_enabled);
+		cJSON_AddNumberToObject(root, "event_handlers_enabled", psdata->event_handlers_enabled);
+		cJSON_AddNumberToObject(root, "flap_detection_enabled", psdata->flap_detection_enabled);
+		cJSON_AddNumberToObject(root, "process_performance_data", psdata->process_performance_data);
+		cJSON_AddNumberToObject(root, "obsess_over_services", psdata->obsess_over_services);
+		cJSON_AddNumberToObject(root, "obsess_over_hosts", psdata->obsess_over_hosts);
+		cJSON_AddNumberToObject(root, "modified_service_attributes", psdata->modified_service_attributes);
+		cJSON_AddNumberToObject(root, "modified_host_attributes", psdata->modified_host_attributes);
+
+		cJSON_AddStringToObject(root, "global_host_event_handler", STRING(psdata->global_host_event_handler));
+		cJSON_AddStringToObject(root, "global_service_event_handler", STRING(psdata->global_service_event_handler));
+		
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+		
 		ndomod_broker_data_serialize(dbufp, NDO_API_PROGRAMSTATUSDATA,
 				program_status_data, ARRAY_SIZE(program_status_data), TRUE);
 
@@ -2128,6 +2484,28 @@ static bd_result ndomod_broker_host_status_data(bd_phase phase,
 #endif
 				INIT_BD_SE(NDO_DATA_HOSTCHECKPERIOD, temp_host->check_period)
 			};
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", hsdata->type);
+			cJSON_AddNumberToObject(root, "flags", hsdata->flags);
+			cJSON_AddNumberToObject(root, "attr", hsdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", hsdata->timestamp.tv_sec);
+
+			cJSON_AddNumberToObject(root, "current_state", temp_host->current_state);
+
+			cJSON_AddStringToObject(root, "name", STRING(temp_host->name));
+			cJSON_AddStringToObject(root, "plugin_output", STRING(temp_host->plugin_output));
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
+			cJSON_AddStringToObject(root, "long_plugin_output", STRING(temp_host->long_plugin_output));
+#endif
+			cJSON_AddStringToObject(root, "perf_data", STRING(temp_host->perf_data));
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+			
 			ndomod_broker_data_serialize(dbufp, NDO_API_HOSTSTATUSDATA,
 					host_status_data, ARRAY_SIZE(host_status_data), FALSE);
 		}
@@ -2220,6 +2598,29 @@ static bd_result ndomod_broker_service_status_data(bd_phase phase,
 				INIT_BD_F(NDO_DATA_RETRYCHECKINTERVAL, temp_service->retry_interval),
 				INIT_BD_SE(NDO_DATA_SERVICECHECKPERIOD, temp_service->check_period)
 			};
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", ssdata->type);
+			cJSON_AddNumberToObject(root, "flags", ssdata->flags);
+			cJSON_AddNumberToObject(root, "attr", ssdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", ssdata->timestamp.tv_sec);
+
+			cJSON_AddNumberToObject(root, "current_state", temp_service->current_state);
+
+			cJSON_AddStringToObject(root, "host_name", STRING(temp_service->host_name));
+			cJSON_AddStringToObject(root, "description", STRING(temp_service->description));
+			cJSON_AddStringToObject(root, "plugin_output", STRING(temp_service->plugin_output));
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
+			cJSON_AddStringToObject(root, "long_plugin_output", STRING(temp_service->long_plugin_output));
+#endif
+			cJSON_AddStringToObject(root, "perf_data", STRING(temp_service->perf_data));
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+			
 			ndomod_broker_data_serialize(dbufp, NDO_API_SERVICESTATUSDATA,
 					service_status_data, ARRAY_SIZE(service_status_data), FALSE);
 		}
@@ -2249,6 +2650,26 @@ static bd_result ndomod_broker_adaptive_program_data(bd_phase phase,
 			INIT_BD_SE(NDO_DATA_GLOBALHOSTEVENTHANDLER, global_host_event_handler),
 			INIT_BD_SE(NDO_DATA_GLOBALSERVICEEVENTHANDLER, global_service_event_handler),
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", apdata->type);
+		cJSON_AddNumberToObject(root, "flags", apdata->flags);
+		cJSON_AddNumberToObject(root, "attr", apdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", apdata->timestamp.tv_sec);
+
+		cJSON_AddNumberToObject(root, "command_type", apdata->command_type);
+		cJSON_AddNumberToObject(root, "modified_host_attribute", apdata->modified_host_attribute);
+		cJSON_AddNumberToObject(root, "modified_host_attributes", apdata->modified_host_attributes);
+		cJSON_AddNumberToObject(root, "modified_service_attribute", apdata->modified_service_attribute);
+		cJSON_AddNumberToObject(root, "modified_service_attributes", apdata->modified_service_attributes);
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+
 		ndomod_broker_data_serialize(dbufp, NDO_API_ADAPTIVEPROGRAMDATA,
 				adaptive_program_data, ARRAY_SIZE(adaptive_program_data), TRUE);
 
@@ -2286,6 +2707,37 @@ static bd_result ndomod_broker_adaptive_host_data(bd_phase phase,
 #endif
 				INIT_BD_I(NDO_DATA_MAXCHECKATTEMPTS, temp_host->max_attempts),
 			};
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", ahdata->type);
+			cJSON_AddNumberToObject(root, "flags", ahdata->flags);
+			cJSON_AddNumberToObject(root, "attr", ahdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", ahdata->timestamp.tv_sec);
+			
+			cJSON_AddNumberToObject(root, "command_type", ahdata->command_type);
+			cJSON_AddNumberToObject(root, "modified_attribute", ahdata->modified_attribute);
+			cJSON_AddNumberToObject(root, "modified_attributes", ahdata->modified_attributes);
+			cJSON_AddNumberToObject(root, "check_interval", temp_host->check_interval);
+#if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
+			cJSON_AddNumberToObject(root, "retry_interval", temp_host->retry_interval);
+#endif
+			cJSON_AddNumberToObject(root, "max_attempts", temp_host->max_attempts);
+
+			cJSON_AddStringToObject(root, "name", STRING(temp_host->name));
+			cJSON_AddStringToObject(root, "event_handler", STRING(temp_host->event_handler));	
+#ifdef BUILD_NAGIOS_4X
+			cJSON_AddStringToObject(root, "check_command", STRING(temp_host->check_command));
+#else
+			cJSON_AddStringToObject(root, "host_check_command", STRING(temp_host->host_check_command));
+#endif
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+
+
 			ndomod_broker_data_serialize(dbufp, NDO_API_ADAPTIVEHOSTDATA,
 					adaptive_host_data, ARRAY_SIZE(adaptive_host_data), TRUE);
 		}
@@ -2321,6 +2773,35 @@ static bd_result ndomod_broker_adaptive_service_data(bd_phase phase,
 				INIT_BD_F(NDO_DATA_RETRYCHECKINTERVAL, temp_service->retry_interval),
 				INIT_BD_I(NDO_DATA_MAXCHECKATTEMPTS, temp_service->max_attempts),
 			};
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", asdata->type);
+			cJSON_AddNumberToObject(root, "flags", asdata->flags);
+			cJSON_AddNumberToObject(root, "attr", asdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", asdata->timestamp.tv_sec);
+			
+			cJSON_AddNumberToObject(root, "command_type", asdata->command_type);
+			cJSON_AddNumberToObject(root, "modified_attribute", asdata->modified_attribute);
+			cJSON_AddNumberToObject(root, "modified_attributes", asdata->modified_attributes);
+			cJSON_AddNumberToObject(root, "check_interval", temp_service->check_interval);
+			cJSON_AddNumberToObject(root, "retry_interval", temp_service->retry_interval);
+			cJSON_AddNumberToObject(root, "max_attempts", temp_service->max_attempts);
+
+			cJSON_AddStringToObject(root, "host_name", STRING(temp_service->host_name));
+			cJSON_AddStringToObject(root, "event_handler", STRING(temp_service->event_handler));
+#ifdef BUILD_NAGIOS_4X
+			cJSON_AddStringToObject(root, "check_command", STRING(temp_service->check_command));
+#else
+			cJSON_AddStringToObject(root, "service_check_command", STRING(temp_service->service_check_command));
+#endif
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+
+			
 			ndomod_broker_data_serialize(dbufp, NDO_API_ADAPTIVESERVICEDATA,
 					adaptive_service_data, ARRAY_SIZE(adaptive_service_data), TRUE);
 		}
@@ -2342,6 +2823,26 @@ static bd_result ndomod_broker_external_command_data(bd_phase phase,
 			INIT_BD_SE(NDO_DATA_COMMANDSTRING, ecdata->command_string),
 			INIT_BD_SE(NDO_DATA_COMMANDARGS, ecdata->command_args),
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", ecdata->type);
+		cJSON_AddNumberToObject(root, "flags", ecdata->flags);
+		cJSON_AddNumberToObject(root, "attr", ecdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", ecdata->timestamp.tv_sec);
+		
+		cJSON_AddNumberToObject(root, "command_type", ecdata->command_type);
+		cJSON_AddNumberToObject(root, "entry_time", (unsigned long)ecdata->entry_time);
+		
+		cJSON_AddStringToObject(root, "command_string", STRING(ecdata->command_string));
+		cJSON_AddStringToObject(root, "command_args", STRING(ecdata->command_args));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+
 		ndomod_broker_data_serialize(dbufp, NDO_API_EXTERNALCOMMANDDATA,
 				external_command_data, ARRAY_SIZE(external_command_data), TRUE);
 
@@ -2424,6 +2925,38 @@ static bd_result ndomod_broker_contact_notification_data(bd_phase phase,
 			INIT_BD_SE(NDO_DATA_ACKAUTHOR, cnotdata->ack_author),
 			INIT_BD_SE(NDO_DATA_ACKDATA, cnotdata->ack_data),
 		};
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", cnotdata->type);
+		cJSON_AddNumberToObject(root, "flags", cnotdata->flags);
+		cJSON_AddNumberToObject(root, "attr", cnotdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", cnotdata->timestamp.tv_sec);
+
+
+		cJSON_AddNumberToObject(root, "notification_type", cnotdata->notification_type);
+		cJSON_AddNumberToObject(root, "state", cnotdata->state);
+		cJSON_AddNumberToObject(root, "reason_type", cnotdata->reason_type);
+		cJSON_AddNumberToObject(root, "start_time", 
+			GET_US(cnotdata->start_time.tv_sec, cnotdata->start_time.tv_usec));
+		cJSON_AddNumberToObject(root, "end_time", 
+			GET_US(cnotdata->end_time.tv_sec, cnotdata->end_time.tv_usec));
+		cJSON_AddNumberToObject(root, "escalated", cnotdata->escalated);
+
+		cJSON_AddStringToObject(root, "host_name", STRING(cnotdata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(cnotdata->service_description));
+		cJSON_AddStringToObject(root, "contact_name", STRING(cnotdata->contact_name));
+		cJSON_AddStringToObject(root, "ack_author", STRING(cnotdata->ack_author));
+		cJSON_AddStringToObject(root, "ack_data", STRING(cnotdata->ack_data));
+		cJSON_AddStringToObject(root, "output", STRING(cnotdata->output));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+
+
 		ndomod_broker_data_serialize(dbufp, NDO_API_CONTACTNOTIFICATIONDATA,
 				contact_notification_data, ARRAY_SIZE(contact_notification_data), TRUE);
 
@@ -2453,6 +2986,40 @@ static bd_result ndomod_broker_contact_notification_method_data(bd_phase phase,
 			INIT_BD_SE(NDO_DATA_ACKAUTHOR, cnotmdata->ack_author),
 			INIT_BD_SE(NDO_DATA_ACKDATA, cnotmdata->ack_data),
 		};
+
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", cnotmdata->type);
+		cJSON_AddNumberToObject(root, "flags", cnotmdata->flags);
+		cJSON_AddNumberToObject(root, "attr", cnotmdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", cnotmdata->timestamp.tv_sec);
+
+
+		cJSON_AddNumberToObject(root, "notification_type", cnotmdata->notification_type);
+		cJSON_AddNumberToObject(root, "state", cnotmdata->state);
+		cJSON_AddNumberToObject(root, "reason_type", cnotmdata->reason_type);
+		cJSON_AddNumberToObject(root, "start_time", 
+			GET_US(cnotmdata->start_time.tv_sec, cnotmdata->start_time.tv_usec));
+		cJSON_AddNumberToObject(root, "end_time", 
+			GET_US(cnotmdata->end_time.tv_sec, cnotmdata->end_time.tv_usec));
+		cJSON_AddNumberToObject(root, "escalated", cnotmdata->escalated);
+
+		cJSON_AddStringToObject(root, "host_name", STRING(cnotmdata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(cnotmdata->service_description));
+		cJSON_AddStringToObject(root, "contact_name", STRING(cnotmdata->contact_name));
+		cJSON_AddStringToObject(root, "ack_author", STRING(cnotmdata->ack_author));
+		cJSON_AddStringToObject(root, "ack_data", STRING(cnotmdata->ack_data));
+		cJSON_AddStringToObject(root, "output", STRING(cnotmdata->output));
+		cJSON_AddStringToObject(root, "command_name", STRING(cnotmdata->command_name));
+		cJSON_AddStringToObject(root, "command_args", STRING(cnotmdata->command_args));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+
 		ndomod_broker_data_serialize(dbufp, NDO_API_CONTACTNOTIFICATIONMETHODDATA,
 				contact_notification_method_data,
 				ARRAY_SIZE(contact_notification_method_data), TRUE);
@@ -2479,6 +3046,33 @@ static bd_result ndomod_broker_acknowledgement_data(bd_phase phase,
 			INIT_BD_I(NDO_DATA_PERSISTENT, ackdata->persistent_comment),
 			INIT_BD_I(NDO_DATA_NOTIFYCONTACTS, ackdata->notify_contacts),
 		};
+
+
+		cJSON *root;
+		root = cJSON_CreateObject();
+		cJSON_AddNumberToObject(root, "type", ackdata->type);
+		cJSON_AddNumberToObject(root, "flags", ackdata->flags);
+		cJSON_AddNumberToObject(root, "attr", ackdata->attr);
+		cJSON_AddNumberToObject(root, "timestamp", ackdata->timestamp.tv_sec);
+
+
+		cJSON_AddNumberToObject(root, "acknowledgement_type", ackdata->acknowledgement_type);
+		cJSON_AddNumberToObject(root, "state", ackdata->state);
+		cJSON_AddNumberToObject(root, "is_sticky", ackdata->is_sticky);
+		cJSON_AddNumberToObject(root, "persistent_comment", ackdata->persistent_comment);
+		cJSON_AddNumberToObject(root, "notify_contacts", ackdata->notify_contacts);
+
+		cJSON_AddStringToObject(root, "host_name", STRING(ackdata->host_name));
+		cJSON_AddStringToObject(root, "service_description", STRING(ackdata->service_description));
+		cJSON_AddStringToObject(root, "author_name", STRING(ackdata->author_name));
+		cJSON_AddStringToObject(root, "comment_data", STRING(ackdata->comment_data));
+		
+		char *buffer = cJSON_PrintUnformatted(root);
+		ndomod_post(buffer);
+		free(buffer);
+		cJSON_Delete(root);
+
+		
 		ndomod_broker_data_serialize(dbufp, NDO_API_ACKNOWLEDGEMENTDATA,
 				acknowledgement_data, ARRAY_SIZE(acknowledgement_data), TRUE);
 
@@ -2549,6 +3143,31 @@ static bd_result ndomod_broker_state_change_data(bd_phase phase,
 				/* Preparing for long_output in the future */
 				INIT_BD_SE(NDO_DATA_LONGOUTPUT, schangedata->output),
 			};
+
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", schangedata->type);
+			cJSON_AddNumberToObject(root, "flags", schangedata->flags);
+			cJSON_AddNumberToObject(root, "attr", schangedata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", schangedata->timestamp.tv_sec);
+			
+			
+			cJSON_AddNumberToObject(root, "statechange_type", schangedata->statechange_type);
+			cJSON_AddNumberToObject(root, "state", schangedata->state);
+			cJSON_AddNumberToObject(root, "state_type", schangedata->state_type);
+			cJSON_AddNumberToObject(root, "current_attempt", schangedata->current_attempt);
+			cJSON_AddNumberToObject(root, "max_attempts", schangedata->max_attempts);
+			
+			cJSON_AddStringToObject(root, "host_name", STRING(schangedata->host_name));
+			cJSON_AddStringToObject(root, "service_description", STRING(schangedata->service_description));
+			cJSON_AddStringToObject(root, "output", STRING(schangedata->output));
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+			
 			ndomod_broker_data_serialize(dbufp, NDO_API_STATECHANGEDATA,
 					state_change_data, ARRAY_SIZE(state_change_data), TRUE);
 		}
@@ -2579,6 +3198,29 @@ static bd_result ndomod_broker_contact_status_data(bd_phase phase,
 				INIT_BD_UL(NDO_DATA_MODIFIEDHOSTATTRIBUTES, temp_contact->modified_host_attributes),
 				INIT_BD_UL(NDO_DATA_MODIFIEDSERVICEATTRIBUTES, temp_contact->modified_service_attributes)
 			};
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", csdata->type);
+			cJSON_AddNumberToObject(root, "flags", csdata->flags);
+			cJSON_AddNumberToObject(root, "attr", csdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", csdata->timestamp.tv_sec);
+			
+			cJSON_AddNumberToObject(root, "host_notifications_enabled", temp_contact->host_notifications_enabled);
+			cJSON_AddNumberToObject(root, "service_notifications_enabled", temp_contact->service_notifications_enabled);
+			cJSON_AddNumberToObject(root, "last_host_notification", temp_contact->last_host_notification);
+			cJSON_AddNumberToObject(root, "last_service_notification", temp_contact->last_service_notification);
+			cJSON_AddNumberToObject(root, "modified_attributes", temp_contact->modified_attributes);
+			cJSON_AddNumberToObject(root, "modified_host_attributes", temp_contact->modified_host_attributes);
+			cJSON_AddNumberToObject(root, "modified_service_attributes", temp_contact->modified_service_attributes);
+			
+			cJSON_AddStringToObject(root, "name", STRING(temp_contact->name));
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+
 			ndomod_broker_data_serialize(dbufp, NDO_API_CONTACTSTATUSDATA,
 					contact_status_data, ARRAY_SIZE(contact_status_data), FALSE);
 		}
@@ -2615,6 +3257,28 @@ static bd_result ndomod_broker_adaptive_contact_data(bd_phase phase,
 				INIT_BD_I(NDO_DATA_HOSTNOTIFICATIONSENABLED, temp_contact->host_notifications_enabled),
 				INIT_BD_I(NDO_DATA_SERVICENOTIFICATIONSENABLED, temp_contact->service_notifications_enabled),
 			};
+
+			cJSON *root;
+			root = cJSON_CreateObject();
+			cJSON_AddNumberToObject(root, "type", acdata->type);
+			cJSON_AddNumberToObject(root, "flags", acdata->flags);
+			cJSON_AddNumberToObject(root, "attr", acdata->attr);
+			cJSON_AddNumberToObject(root, "timestamp", acdata->timestamp.tv_sec);
+			cJSON_AddNumberToObject(root, "command_type", acdata->command_type);
+			
+			cJSON_AddNumberToObject(root, "modified_attribute", acdata->modified_attribute);
+			cJSON_AddNumberToObject(root, "modified_attributes", acdata->modified_attributes);
+			cJSON_AddNumberToObject(root, "modified_host_attribute", acdata->modified_host_attribute);
+			cJSON_AddNumberToObject(root, "modified_host_attributes", acdata->modified_host_attributes);
+			cJSON_AddNumberToObject(root, "modified_service_attribute", acdata->modified_service_attribute);
+			cJSON_AddNumberToObject(root, "modified_service_attributes", acdata->modified_service_attributes);
+			
+			char *buffer = cJSON_PrintUnformatted(root);
+			ndomod_post(buffer);
+			free(buffer);
+			cJSON_Delete(root);
+
+
 			ndomod_broker_data_serialize(dbufp, NDO_API_ADAPTIVECONTACTDATA,
 					adaptive_contact_data, ARRAY_SIZE(adaptive_contact_data), TRUE);
 		}
