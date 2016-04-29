@@ -20,6 +20,7 @@
 
 # Source code directories
 SRC_BASE=./src
+SRC_CJSON=./cjson
 SRC_INCLUDE=./include
 SRC_CONFIG=./config
 
@@ -35,6 +36,7 @@ INIT_DIR=@init_dir@
 INIT_OPTS=-o root -g root
 
 all:
+	cd $(SRC_CJSON) && $(MAKE)
 	cd $(SRC_BASE) && $(MAKE)
 
 ctags:
@@ -66,11 +68,13 @@ fullinstall: install install-init install-config
 
 clean:
 	cd $(SRC_BASE) && $(MAKE) $@
+	cd $(SRC_CJSON) && $(MAKE) $@
 	rm -f core
 	rm -f *~ */*~ include/nagios-*/*~
 
 distclean: clean
 	cd $(SRC_BASE) && $(MAKE) $@
+	cd $(SRC_CJSON) && $(MAKE) $@
 	cd docs/docbook/en-en/ && $(MAKE) $@
 	rm -f config.log config.status config.cache 
 	rm -f $(SRC_INCLUDE)/dh.h $(SRC_INCLUDE)/config.h
