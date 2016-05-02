@@ -1413,11 +1413,11 @@ static void ndomod_post(char *buffer) {
 	bzero(&index , sizeof(index));
 	bzero(&json , sizeof(json));
 
-    strftime(index, INDEX_BUFLEN, "{\"create\":{\"_index\":\"nagios-%Y.%m.%d\", \"_type\":\"nagios\"}}\n", localtime(&now));
-    //ndomod_printf_to_logs("index: %s\n", index);
+    strftime(index, INDEX_BUFLEN, 
+		"{\"create\":{\"_index\":\"nagios-%Y.%m.%d\", \"_type\":\"nagios\"}}\n",
+		localtime(&now));
     snprintf(json, JSON_BUFLEN, "%s%s\n", index, buffer);
-	//ndomod_printf_to_logs("post: %s\n", json);
-    printf("cjson: %s\n", json);
+    //printf("cjson: %s\n", json);
 
 	pCurl = curl_easy_init();
 	if (NULL != pCurl) {
@@ -2508,13 +2508,66 @@ static bd_result ndomod_broker_host_status_data(bd_phase phase,
 			ADD_TIMESTAMP(&hsdata->timestamp.tv_sec);
 
 			cJSON_AddNumberToObject(root, "current_state", temp_host->current_state);
-			
+			cJSON_AddNumberToObject(root, "has_been_checked", temp_host->has_been_checked);
+			cJSON_AddNumberToObject(root, "should_be_scheduled", temp_host->should_be_scheduled);
+			cJSON_AddNumberToObject(root, "current_attempt", temp_host->current_attempt);
+			cJSON_AddNumberToObject(root, "max_attempts", temp_host->max_attempts);
+			cJSON_AddNumberToObject(root, "last_check", temp_host->last_check);
+			cJSON_AddNumberToObject(root, "next_check", temp_host->next_check);
+			cJSON_AddNumberToObject(root, "check_type", temp_host->check_type);
+			cJSON_AddNumberToObject(root, "last_state_change", temp_host->last_state_change);
+			cJSON_AddNumberToObject(root, "last_hard_state_change", temp_host->last_hard_state_change);
+			cJSON_AddNumberToObject(root, "last_hard_state", temp_host->last_hard_state);
+			cJSON_AddNumberToObject(root, "last_time_up", temp_host->last_time_up);
+			cJSON_AddNumberToObject(root, "last_time_down", temp_host->last_time_down);
+			cJSON_AddNumberToObject(root, "last_time_unreachable", temp_host->last_time_unreachable);
+			cJSON_AddNumberToObject(root, "state_type", temp_host->state_type);
+#ifdef BUILD_NAGIOS_4X
+			cJSON_AddNumberToObject(root, "last_notification", (unsigned long)temp_host->last_notification);
+			cJSON_AddNumberToObject(root, "next_notification", (unsigned long)temp_host->next_notification);
+			cJSON_AddNumberToObject(root, "accept_passive_checks", (unsigned long)temp_host->accept_passive_checks);
+			cJSON_AddNumberToObject(root, "failure_prediction_enabled", 0);
+#else
+			cJSON_AddNumberToObject(root, "last_host_notification", (unsigned long)temp_host->last_host_notification);
+			cJSON_AddNumberToObject(root, "next_host_notification", (unsigned long)temp_host->next_host_notification);
+			cJSON_AddNumberToObject(root, "accept_passive_host_checks", 
+				(unsigned long)temp_host->accept_passive_host_checks);
+			cJSON_AddNumberToObject(root, "failure_prediction_enabled", 
+				(unsigned long)temp_host->failure_prediction_enabled);
+#endif
+
+			cJSON_AddNumberToObject(root, "no_more_notifications", temp_host->no_more_notifications);
+			cJSON_AddNumberToObject(root, "notifications_enabled", temp_host->notifications_enabled);
+			cJSON_AddNumberToObject(root, "problem_has_been_acknowledged", temp_host->problem_has_been_acknowledged);
+			cJSON_AddNumberToObject(root, "acknowledgement_type", temp_host->acknowledgement_type);
+			cJSON_AddNumberToObject(root, "current_notification_number", temp_host->current_notification_number);
+			cJSON_AddNumberToObject(root, "event_handler_enabled", temp_host->event_handler_enabled);
+			cJSON_AddNumberToObject(root, "checks_enabled", temp_host->checks_enabled);
+			cJSON_AddNumberToObject(root, "flap_detection_enabled", temp_host->flap_detection_enabled);
+			cJSON_AddNumberToObject(root, "is_flapping", temp_host->is_flapping);
+			cJSON_AddNumberToObject(root, "percent_state_change", temp_host->percent_state_change);
+			cJSON_AddNumberToObject(root, "latency", temp_host->latency);
+			cJSON_AddNumberToObject(root, "execution_time", temp_host->execution_time);
+			cJSON_AddNumberToObject(root, "scheduled_downtime_depth", temp_host->scheduled_downtime_depth);
+			cJSON_AddNumberToObject(root, "process_performance_data", temp_host->process_performance_data);
+			cJSON_AddNumberToObject(root, "modified_attributes", temp_host->modified_attributes);
+			cJSON_AddNumberToObject(root, "check_interval", temp_host->check_interval);
+
+
+#ifdef BUILD_NAGIOS_4X
+			cJSON_AddStringToObject(root, "check_command", STRING(temp_host->check_command));
+#else
+			cJSON_AddStringToObject(root, "host_check_command", STRING(temp_host->host_check_command));
+#endif	
 			cJSON_AddStringToObject(root, "name", STRING(temp_host->name));
 			cJSON_AddStringToObject(root, "plugin_output", STRING(temp_host->plugin_output));
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
 			cJSON_AddStringToObject(root, "long_plugin_output", STRING(temp_host->long_plugin_output));
 #endif
 			cJSON_AddStringToObject(root, "perf_data", STRING(temp_host->perf_data));
+			cJSON_AddStringToObject(root, "check_period", STRING(temp_host->check_period));
+			cJSON_AddStringToObject(root, "event_handler", STRING(temp_host->event_handler));
+
 			
 			char *buffer = cJSON_PrintUnformatted(root);
 			ndomod_post(buffer);
@@ -2623,7 +2676,56 @@ static bd_result ndomod_broker_service_status_data(bd_phase phase,
 			ADD_TIMESTAMP(&ssdata->timestamp.tv_sec);
 
 			cJSON_AddNumberToObject(root, "current_state", temp_service->current_state);
-			
+			cJSON_AddNumberToObject(root, "has_been_checked", temp_service->has_been_checked);
+			cJSON_AddNumberToObject(root, "should_be_scheduled", temp_service->should_be_scheduled);
+			cJSON_AddNumberToObject(root, "current_attempt", temp_service->current_attempt);
+			cJSON_AddNumberToObject(root, "max_attempts", temp_service->max_attempts);
+			cJSON_AddNumberToObject(root, "last_check", (unsigned long)temp_service->last_check);
+			cJSON_AddNumberToObject(root, "next_check", (unsigned long)temp_service->next_check);
+			cJSON_AddNumberToObject(root, "check_type", temp_service->check_type);
+			cJSON_AddNumberToObject(root, "last_state_change", (unsigned long)temp_service->last_state_change);
+			cJSON_AddNumberToObject(root, "last_hard_state_change", (unsigned long)temp_service->last_hard_state_change);
+			cJSON_AddNumberToObject(root, "last_hard_state", temp_service->last_hard_state);
+			cJSON_AddNumberToObject(root, "last_time_ok", (unsigned long)temp_service->last_time_ok);
+			cJSON_AddNumberToObject(root, "last_time_warning", (unsigned long)temp_service->last_time_warning);
+			cJSON_AddNumberToObject(root, "last_time_unknown", (unsigned long)temp_service->last_time_unknown);
+			cJSON_AddNumberToObject(root, "last_time_critical", (unsigned long)temp_service->last_time_critical);
+			cJSON_AddNumberToObject(root, "state_type", temp_service->state_type);
+			cJSON_AddNumberToObject(root, "last_notification", (unsigned long)temp_service->last_notification);
+			cJSON_AddNumberToObject(root, "next_notification", (unsigned long)temp_service->next_notification);
+			cJSON_AddNumberToObject(root, "no_more_notifications", temp_service->no_more_notifications);
+			cJSON_AddNumberToObject(root, "notifications_enabled", temp_service->notifications_enabled);
+			cJSON_AddNumberToObject(root, "problem_has_been_acknowledged", temp_service->problem_has_been_acknowledged);
+			cJSON_AddNumberToObject(root, "acknowledgement_type", temp_service->acknowledgement_type);
+			cJSON_AddNumberToObject(root, "current_notification_number", temp_service->current_notification_number);
+#ifdef BUILD_NAGIOS_4X
+			cJSON_AddNumberToObject(root, "accept_passive_checks", temp_service->accept_passive_checks);
+#else
+			cJSON_AddNumberToObject(root, "accept_passive_service_checks", temp_service->accept_passive_service_checks);
+#endif
+			cJSON_AddNumberToObject(root, "event_handler_enabled", temp_service->event_handler_enabled);
+			cJSON_AddNumberToObject(root, "checks_enabled", temp_service->checks_enabled);
+			cJSON_AddNumberToObject(root, "flap_detection_enabled", temp_service->flap_detection_enabled);
+			cJSON_AddNumberToObject(root, "is_flapping", temp_service->is_flapping);
+			cJSON_AddNumberToObject(root, "percent_state_change", temp_service->percent_state_change);
+			cJSON_AddNumberToObject(root, "latency", temp_service->latency);
+			cJSON_AddNumberToObject(root, "execution_time", temp_service->execution_time);
+			cJSON_AddNumberToObject(root, "scheduled_downtime_depth", temp_service->scheduled_downtime_depth);
+			cJSON_AddNumberToObject(root, "process_performance_data", temp_service->process_performance_data);
+			cJSON_AddNumberToObject(root, "modified_attributes", temp_service->modified_attributes);
+			cJSON_AddNumberToObject(root, "check_interval", temp_service->check_interval);
+			cJSON_AddNumberToObject(root, "retry_interval", temp_service->retry_interval);
+			cJSON_AddNumberToObject(root, "latency", temp_service->latency);
+
+
+
+			cJSON_AddStringToObject(root, "check_period", STRING(temp_service->check_period));
+#ifdef BUILD_NAGIOS_4X
+			cJSON_AddStringToObject(root, "check_command", STRING(temp_service->check_command));
+#else
+			cJSON_AddStringToObject(root, "service_check_command", STRING(temp_service->service_check_command));
+#endif
+			cJSON_AddStringToObject(root, "event_handler", STRING(temp_service->event_handler));
 			cJSON_AddStringToObject(root, "host_name", STRING(temp_service->host_name));
 			cJSON_AddStringToObject(root, "description", STRING(temp_service->description));
 			cJSON_AddStringToObject(root, "plugin_output", STRING(temp_service->plugin_output));
