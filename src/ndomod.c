@@ -439,6 +439,8 @@ static int ndomod_deinit(void) {
 
 	ndomod_free_config_memory();
 
+	curl_global_cleanup();
+
 	return NDO_OK;
 }
 
