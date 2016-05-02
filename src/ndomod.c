@@ -88,6 +88,15 @@
 
 #define STRING(X)	((X) == NULL) ? "" : (X)
 
+#define TIMESTAMP_LEN	(32)
+char json_timestamp[TIMESTAMP_LEN] = {0};
+
+#define ADD_TIMESTAMP(X)	\
+	bzero(json_timestamp, sizeof(json_timestamp));		\
+	strftime(json_timestamp, TIMESTAMP_LEN, "%FT%T+0800", localtime(X));	\
+	cJSON_AddStringToObject(root, "@timestamp", json_timestamp)
+	
+
 
 CURL *pCurl = NULL;
 CURLcode res;
@@ -1408,6 +1417,7 @@ static void ndomod_post(char *buffer) {
     //ndomod_printf_to_logs("index: %s\n", index);
     snprintf(json, JSON_BUFLEN, "%s%s\n", index, buffer);
 	//ndomod_printf_to_logs("post: %s\n", json);
+    printf("cjson: %s\n", json);
 
 	pCurl = curl_easy_init();
 	if (NULL != pCurl) {
@@ -1627,6 +1637,7 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
 					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
 					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+					ADD_TIMESTAMP(&eventdata->timestamp.tv_sec);
 
 					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
 					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
@@ -1666,6 +1677,7 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
 					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
 					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+					ADD_TIMESTAMP(&eventdata->timestamp.tv_sec);
 
 					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
 					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
@@ -1707,6 +1719,7 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
 					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
 					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+					ADD_TIMESTAMP(&eventdata->timestamp.tv_sec);
 
 					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
 					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
@@ -1741,6 +1754,7 @@ static bd_result ndomod_broker_timed_event_data(bd_phase phase,
 					cJSON_AddNumberToObject(root, "flags", eventdata->flags);
 					cJSON_AddNumberToObject(root, "attr", eventdata->attr);
 					cJSON_AddNumberToObject(root, "timestamp", eventdata->timestamp.tv_sec);
+					ADD_TIMESTAMP(&eventdata->timestamp.tv_sec);
 
 					cJSON_AddNumberToObject(root, "event_type", eventdata->event_type);
 					cJSON_AddNumberToObject(root, "recurring", eventdata->recurring);
@@ -1781,13 +1795,8 @@ static bd_result ndomod_broker_log_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", logdata->flags);
 		cJSON_AddNumberToObject(root, "attr", logdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", logdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&logdata->timestamp.tv_sec);
 
-
-		char ts[32];
-		strftime(ts, 32, "%FT%T", localtime(&logdata->timestamp.tv_sec));
-		cJSON_AddStringToObject(root, "@timestamp", ts);
-		
-		
 		cJSON_AddNumberToObject(root, "data_type", logdata->data_type);
 		cJSON_AddNumberToObject(root, "entry_time", (unsigned long)logdata->entry_time);
 
@@ -1831,6 +1840,7 @@ static bd_result ndomod_broker_system_command_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", cmddata->flags);
 		cJSON_AddNumberToObject(root, "attr", cmddata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", cmddata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&cmddata->timestamp.tv_sec);
 
 		cJSON_AddNumberToObject(root, "start_time", 
 			GET_US(cmddata->start_time.tv_sec, cmddata->start_time.tv_usec));
@@ -1889,6 +1899,7 @@ static bd_result ndomod_broker_event_handler_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", ehanddata->flags);
 		cJSON_AddNumberToObject(root, "attr", ehanddata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", ehanddata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&ehanddata->timestamp.tv_sec);
 
 
 		cJSON_AddNumberToObject(root, "eventhandler_type", ehanddata->eventhandler_type);
@@ -1953,6 +1964,7 @@ static bd_result ndomod_broker_notification_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", notdata->flags);
 		cJSON_AddNumberToObject(root, "attr", notdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", notdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&notdata->timestamp.tv_sec);
 
 
 		cJSON_AddNumberToObject(root, "notification_type", notdata->notification_type);
@@ -2028,6 +2040,7 @@ static bd_result ndomod_broker_service_check_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", scdata->flags);
 			cJSON_AddNumberToObject(root, "attr", scdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", scdata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&scdata->timestamp.tv_sec);
 			
 			cJSON_AddNumberToObject(root, "current_attempt", scdata->current_attempt);
 			cJSON_AddNumberToObject(root, "check_type", scdata->check_type);
@@ -2111,6 +2124,8 @@ static bd_result ndomod_broker_host_check_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", hcdata->flags);
 			cJSON_AddNumberToObject(root, "attr", hcdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", hcdata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&hcdata->timestamp.tv_sec);
+			
 			cJSON_AddNumberToObject(root, "current_attempt", hcdata->current_attempt);
 			cJSON_AddNumberToObject(root, "check_type", hcdata->check_type);
 			cJSON_AddNumberToObject(root, "max_attempts", hcdata->max_attempts);
@@ -2125,12 +2140,7 @@ static bd_result ndomod_broker_host_check_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "execution_time", hcdata->execution_time);
 			cJSON_AddNumberToObject(root, "latency", hcdata->latency);
 			cJSON_AddNumberToObject(root, "return_code", hcdata->return_code);
-
-
-			char ts[32];
-			strftime(ts, 32, "%FT%T", localtime(&hcdata->timestamp.tv_sec));
-			cJSON_AddStringToObject(root, "@timestamp", ts);
-		
+			ADD_TIMESTAMP(&hcdata->timestamp.tv_sec);
 			cJSON_AddStringToObject(root, "host_name", STRING(hcdata->host_name));
 			cJSON_AddStringToObject(root, "command_name", STRING(hcdata->command_name));
 			cJSON_AddStringToObject(root, "command_args", STRING(hcdata->command_args));
@@ -2182,6 +2192,7 @@ static bd_result ndomod_broker_comment_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", comdata->flags);
 		cJSON_AddNumberToObject(root, "attr", comdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", comdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&comdata->timestamp.tv_sec);
 		
 		cJSON_AddNumberToObject(root, "comment_type", comdata->comment_type);
 		cJSON_AddNumberToObject(root, "entry_time", comdata->entry_time);
@@ -2238,6 +2249,7 @@ static bd_result ndomod_broker_downtime_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", downdata->flags);
 		cJSON_AddNumberToObject(root, "attr", downdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", downdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&downdata->timestamp.tv_sec);
 		
 		cJSON_AddNumberToObject(root, "downtime_type", downdata->downtime_type);
 		cJSON_AddNumberToObject(root, "entry_time", (unsigned long)downdata->entry_time);
@@ -2294,6 +2306,7 @@ static bd_result ndomod_broker_flapping_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", flapdata->flags);
 		cJSON_AddNumberToObject(root, "attr", flapdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", flapdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&flapdata->timestamp.tv_sec);
 		
 		cJSON_AddNumberToObject(root, "flapping_type", flapdata->flapping_type);
 		cJSON_AddNumberToObject(root, "percent_change", flapdata->percent_change);
@@ -2362,6 +2375,7 @@ static bd_result ndomod_broker_program_status_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", psdata->flags);
 		cJSON_AddNumberToObject(root, "attr", psdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", psdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&psdata->timestamp.tv_sec);
 
 		cJSON_AddNumberToObject(root, "program_start", psdata->program_start);
 		cJSON_AddNumberToObject(root, "last_log_rotation", psdata->last_log_rotation);	
@@ -2491,9 +2505,10 @@ static bd_result ndomod_broker_host_status_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", hsdata->flags);
 			cJSON_AddNumberToObject(root, "attr", hsdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", hsdata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&hsdata->timestamp.tv_sec);
 
 			cJSON_AddNumberToObject(root, "current_state", temp_host->current_state);
-
+			
 			cJSON_AddStringToObject(root, "name", STRING(temp_host->name));
 			cJSON_AddStringToObject(root, "plugin_output", STRING(temp_host->plugin_output));
 #if ( defined( BUILD_NAGIOS_3X) || defined( BUILD_NAGIOS_4X))
@@ -2605,9 +2620,10 @@ static bd_result ndomod_broker_service_status_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", ssdata->flags);
 			cJSON_AddNumberToObject(root, "attr", ssdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", ssdata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&ssdata->timestamp.tv_sec);
 
 			cJSON_AddNumberToObject(root, "current_state", temp_service->current_state);
-
+			
 			cJSON_AddStringToObject(root, "host_name", STRING(temp_service->host_name));
 			cJSON_AddStringToObject(root, "description", STRING(temp_service->description));
 			cJSON_AddStringToObject(root, "plugin_output", STRING(temp_service->plugin_output));
@@ -2657,6 +2673,7 @@ static bd_result ndomod_broker_adaptive_program_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", apdata->flags);
 		cJSON_AddNumberToObject(root, "attr", apdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", apdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&apdata->timestamp.tv_sec);
 
 		cJSON_AddNumberToObject(root, "command_type", apdata->command_type);
 		cJSON_AddNumberToObject(root, "modified_host_attribute", apdata->modified_host_attribute);
@@ -2714,6 +2731,7 @@ static bd_result ndomod_broker_adaptive_host_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", ahdata->flags);
 			cJSON_AddNumberToObject(root, "attr", ahdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", ahdata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&ahdata->timestamp.tv_sec);
 			
 			cJSON_AddNumberToObject(root, "command_type", ahdata->command_type);
 			cJSON_AddNumberToObject(root, "modified_attribute", ahdata->modified_attribute);
@@ -2780,6 +2798,7 @@ static bd_result ndomod_broker_adaptive_service_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", asdata->flags);
 			cJSON_AddNumberToObject(root, "attr", asdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", asdata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&asdata->timestamp.tv_sec);
 			
 			cJSON_AddNumberToObject(root, "command_type", asdata->command_type);
 			cJSON_AddNumberToObject(root, "modified_attribute", asdata->modified_attribute);
@@ -2830,6 +2849,7 @@ static bd_result ndomod_broker_external_command_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", ecdata->flags);
 		cJSON_AddNumberToObject(root, "attr", ecdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", ecdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&ecdata->timestamp.tv_sec);
 		
 		cJSON_AddNumberToObject(root, "command_type", ecdata->command_type);
 		cJSON_AddNumberToObject(root, "entry_time", (unsigned long)ecdata->entry_time);
@@ -2932,6 +2952,7 @@ static bd_result ndomod_broker_contact_notification_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", cnotdata->flags);
 		cJSON_AddNumberToObject(root, "attr", cnotdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", cnotdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&cnotdata->timestamp.tv_sec);
 
 
 		cJSON_AddNumberToObject(root, "notification_type", cnotdata->notification_type);
@@ -2994,6 +3015,7 @@ static bd_result ndomod_broker_contact_notification_method_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", cnotmdata->flags);
 		cJSON_AddNumberToObject(root, "attr", cnotmdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", cnotmdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&cnotmdata->timestamp.tv_sec);
 
 
 		cJSON_AddNumberToObject(root, "notification_type", cnotmdata->notification_type);
@@ -3054,6 +3076,7 @@ static bd_result ndomod_broker_acknowledgement_data(bd_phase phase,
 		cJSON_AddNumberToObject(root, "flags", ackdata->flags);
 		cJSON_AddNumberToObject(root, "attr", ackdata->attr);
 		cJSON_AddNumberToObject(root, "timestamp", ackdata->timestamp.tv_sec);
+		ADD_TIMESTAMP(&ackdata->timestamp.tv_sec);
 
 
 		cJSON_AddNumberToObject(root, "acknowledgement_type", ackdata->acknowledgement_type);
@@ -3151,6 +3174,7 @@ static bd_result ndomod_broker_state_change_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", schangedata->flags);
 			cJSON_AddNumberToObject(root, "attr", schangedata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", schangedata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&schangedata->timestamp.tv_sec);
 			
 			
 			cJSON_AddNumberToObject(root, "statechange_type", schangedata->statechange_type);
@@ -3205,6 +3229,7 @@ static bd_result ndomod_broker_contact_status_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "flags", csdata->flags);
 			cJSON_AddNumberToObject(root, "attr", csdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", csdata->timestamp.tv_sec);
+			ADD_TIMESTAMP(&csdata->timestamp.tv_sec);
 			
 			cJSON_AddNumberToObject(root, "host_notifications_enabled", temp_contact->host_notifications_enabled);
 			cJSON_AddNumberToObject(root, "service_notifications_enabled", temp_contact->service_notifications_enabled);
@@ -3265,6 +3290,7 @@ static bd_result ndomod_broker_adaptive_contact_data(bd_phase phase,
 			cJSON_AddNumberToObject(root, "attr", acdata->attr);
 			cJSON_AddNumberToObject(root, "timestamp", acdata->timestamp.tv_sec);
 			cJSON_AddNumberToObject(root, "command_type", acdata->command_type);
+			ADD_TIMESTAMP(&acdata->timestamp.tv_sec);
 			
 			cJSON_AddNumberToObject(root, "modified_attribute", acdata->modified_attribute);
 			cJSON_AddNumberToObject(root, "modified_attributes", acdata->modified_attributes);
