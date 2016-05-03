@@ -12,6 +12,7 @@
 
 instance_name=default
 
+es_host=http://localhost:9200/_bulk
 
 
 # OUTPUT TYPE
